@@ -2,7 +2,9 @@ import numpy as np
 import scipy.linalg
 from scipy.linalg import null_space
 import matplotlib.pyplot as plt
+
 plt.style.use('seaborn')
+
 
 class TightFrame:
 
@@ -70,23 +72,22 @@ class TightFrame:
 
         assert self.nrow == 2
 
-
-
         origin = np.zeros(self.matrix.shape)  # origin point
 
         # V = np.transpose(self.matrix)
         # plt.quiver(*origin, V[:, 0], V[:, 1], color=['r'], scale=5, label="TF")
 
-        W = np.transpose(self.canonical_dual_frame().matrix)
+        W = self.canonical_dual_frame().matrix
 
         if normalize:
             norm_max = np.linalg.norm(W, 1)
-            matrix = W / norm_max
+            W = W / norm_max
+
+        W = np.transpose(W)
 
         plt.quiver(*origin, W[:, 0], W[:, 1], color=['b'], scale=5, label="Dual TF")
 
         plt.legend()
-
 
     def canonical_tight_frame(self, advanced=False):
         if advanced:
@@ -105,22 +106,24 @@ class TightFrame:
         # V = np.transpose(self.matrix)
         # plt.quiver(*origin, V[:, 0], V[:, 1], color=['r'], scale=5, label="TF")
 
-        W = np.transpose(self.canonical_tight_frame().matrix)
+        W = self.canonical_tight_frame().matrix
         if normalize:
             norm_max = np.linalg.norm(W, 1)
-            matrix = W / norm_max
+            W = W / norm_max
+
+        W = np.transpose(W)
         plt.quiver(*origin, W[:, 0], W[:, 1], color=['g'], scale=5, label="Cannonical TF")
 
         plt.legend()
 
 
 def entf(n, d):
-    '''
+    """
 
     :param n: number of vectors
     :param d: dimention od space
     :return: equal-norm tight frame
-    '''
+    """
     if d == 1:
         return np.ones((1, n))
     if d == n:
