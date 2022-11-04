@@ -1,5 +1,8 @@
 import numpy as np
+import scipy.linalg
 from scipy.linalg import null_space
+import matplotlib.pyplot as plt
+plt.style.use('seaborn')
 
 class TightFrame:
 
@@ -8,8 +11,8 @@ class TightFrame:
         self.matrix = matrix
         self.nrow, self.ncol = np.shape(matrix)
 
-        if self.check() is False:
-            print("WARNING: Given set of vectors is not a Tight Frame!")
+        # if self.check() is False:
+        #     print("WARNING: Given set of vectors is not a Tight Frame!")
 
     def __str__(self):
         return str(self.matrix)
@@ -28,7 +31,7 @@ class TightFrame:
         return np.transpose(self.matrix) @ self.matrix
 
     def check(self):
-        return np.allclose(self.frame_operator() - np.diag(np.diagonal(self.frame_operator())),0)
+        return np.allclose(self.frame_operator() - np.diag(np.diagonal(self.frame_operator())), 0)
 
     def constant(self):
         if self.check() is True:
@@ -42,41 +45,131 @@ class TightFrame:
     def complementary(self):
         return TightFrame(np.transpose(null_space(self.matrix)))
 
+    def frame_bounds(self):
+        eigen_values = scipy.linalg.eigvalsh(self.frame_operator())
+        return np.min(eigen_values), np.max(eigen_values)
 
+    def canonical_dual_frame(self):
+        return TightFrame(np.linalg.solve(self.frame_operator(), self.matrix))
+
+    def plot(self, normalize=False):
+        assert self.nrow == 2
+        if normalize:
+            norm_max = np.linalg.norm(self.matrix, 1)
+            matrix = self.matrix / norm_max
+        else:
+            matrix = self.matrix
+        V = np.transpose(matrix)
+
+        origin = np.zeros(matrix.shape)  # origin point
+
+        plt.quiver(*origin, V[:, 0], V[:, 1], color=['r'], scale=5, label="TF")
+        plt.legend()
+
+    def plot_dual(self, normalize=False):
+
+        assert self.nrow == 2
+
+
+
+        origin = np.zeros(self.matrix.shape)  # origin point
+
+        # V = np.transpose(self.matrix)
+        # plt.quiver(*origin, V[:, 0], V[:, 1], color=['r'], scale=5, label="TF")
+
+        W = np.transpose(self.canonical_dual_frame().matrix)
+
+        if normalize:
+            norm_max = np.linalg.norm(W, 1)
+            matrix = W / norm_max
+
+        plt.quiver(*origin, W[:, 0], W[:, 1], color=['b'], scale=5, label="Dual TF")
+
+        plt.legend()
+
+
+    def canonical_tight_frame(self, advanced=False):
+        if advanced:
+            U, sigma, V = scipy.linalg.svd(self.frame_operator())
+            # print("U: {}".format(U))
+            # print("V: {}".format(V))
+            return TightFrame(U @ np.transpose(V))
+        else:
+            return TightFrame(scipy.linalg.solve(scipy.linalg.sqrtm(self.frame_operator()), self.matrix))
+
+    def plot_canonical(self, normalize=False):
+
+        assert self.nrow == 2
+        origin = np.zeros(self.matrix.shape)  # origin point
+
+        # V = np.transpose(self.matrix)
+        # plt.quiver(*origin, V[:, 0], V[:, 1], color=['r'], scale=5, label="TF")
+
+        W = np.transpose(self.canonical_tight_frame().matrix)
+        if normalize:
+            norm_max = np.linalg.norm(W, 1)
+            matrix = W / norm_max
+        plt.quiver(*origin, W[:, 0], W[:, 1], color=['g'], scale=5, label="Cannonical TF")
+
+        plt.legend()
+
+
+def entf(n, d):
+    '''
+
+    :param n: number of vectors
+    :param d: dimention od space
+    :return: equal-norm tight frame
+    '''
+    if d == 1:
+        return np.ones((1, n))
+    if d == n:
+        return np.eye(n)
+    if d < n < 2 * d:
+        return np.sqrt(n * d) * np.transpose(scipy.linalg.null_space(entf(n, n - d)))
+    if n >= 2 * d > 1:
+        return np.concatenate((d * np.eye(d), entf(n - d, d)), axis=1)
+
+
+def frame_from_gramian(matrix):
+    w, sigma, v = scipy.linalg.svd(matrix)
+    new_v = scipy.linalg.sqrtm(np.diag(sigma)) @ v
+    sliced_v = new_v[~np.all(np.isclose(new_v, 0), axis=1)]
+    return TightFrame(sliced_v)
 # Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-
-    x = TightFrame(np.array([[1,0,-0.5],[0,1,-0.5]]))
-    print(x)
-    print(x.vector_norms())
-    print(x.angles(0,1))
-    print(x.check())
-
-    y = TightFrame(np.array([[0, np.sqrt(3)/2, -np.sqrt(3)/2], [1, -0.5, -0.5]]))
-    print(y)
-    print(y.angles(1,2))
-    print(y.check())
-    print(y.nrow)
-    print(y.constant())
-    print(y.gramian())
-    print(np.linalg.matrix_rank(y.gramian()))
-    print(np.trace(y.gramian()))
-    y_n = y.normalize()
-
-    print(y_n.gramian())
-    print(np.trace(y_n.gramian()))
-    print(y_n.constant())
-    print(y_n)
-    print(y_n.frame_operator())
-    print(y_n.check())
-    print(y_n.constant())
-    print(y.constant())
-    print(np.trace(y_n.gramian()))
-    print(y.frame_operator())
-    print(y.gramian())
-    z = y.complementary()
-    print(z.frame_operator())
-
-    print(z.normalize().gramian() + y.normalize().gramian())
-    print(z)
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+# if __name__ == '__main__':
+#
+#     x = TightFrame(np.array([[1,0,-0.5],[0,1,-0.5]]))
+#     print(x)
+#     print(x.vector_norms())
+#     print(x.angles(0,1))
+#     print(x.check())
+#
+#     y = TightFrame(np.array([[0, np.sqrt(3)/2, -np.sqrt(3)/2], [1, -0.5, -0.5]]))
+#     print(y)
+#     print(y.angles(1,2))
+#     print(y.check())
+#     print(y.nrow)
+#     print(y.constant())
+#     print(y.gramian())
+#     print(np.linalg.matrix_rank(y.gramian()))
+#     print(np.trace(y.gramian()))
+#     y_n = y.normalize()
+#
+#     print(y_n.gramian())
+#     print(np.trace(y_n.gramian()))
+#     print(y_n.constant())
+#     print(y_n)
+#     print(y_n.frame_operator())
+#     print(y_n.check())
+#     print(y_n.constant())
+#     print(y.constant())
+#     print(np.trace(y_n.gramian()))
+#     print(y.frame_operator())
+#     print(y.gramian())
+#     z = y.complementary()
+#     print(z.frame_operator())
+#
+#     print(z.normalize().gramian() + y.normalize().gramian())
+#     print(z)
+# # See PyCharm help at https://www.jetbrains.com/help/pycharm/
