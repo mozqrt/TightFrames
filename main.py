@@ -10,8 +10,8 @@ class TightFrame:
 
     # Enter a Tight Frame as a Matrix with vectors as the columns
     def __init__(self, matrix):
-        self.matrix = matrix
-        self.nrow, self.ncol = np.shape(matrix)
+        self.matrix = matrix.T
+        self.ncol, self.nrow = np.shape(matrix)
 
         # if self.check() is False:
         #     print("WARNING: Given set of vectors is not a Tight Frame!")
@@ -139,40 +139,11 @@ def frame_from_gramian(matrix):
     new_v = scipy.linalg.sqrtm(np.diag(sigma)) @ v
     sliced_v = new_v[~np.all(np.isclose(new_v, 0), axis=1)]
     return TightFrame(sliced_v)
-# Press the green button in the gutter to run the script.
-# if __name__ == '__main__':
-#
-#     x = TightFrame(np.array([[1,0,-0.5],[0,1,-0.5]]))
-#     print(x)
-#     print(x.vector_norms())
-#     print(x.angles(0,1))
-#     print(x.check())
-#
-#     y = TightFrame(np.array([[0, np.sqrt(3)/2, -np.sqrt(3)/2], [1, -0.5, -0.5]]))
-#     print(y)
-#     print(y.angles(1,2))
-#     print(y.check())
-#     print(y.nrow)
-#     print(y.constant())
-#     print(y.gramian())
-#     print(np.linalg.matrix_rank(y.gramian()))
-#     print(np.trace(y.gramian()))
-#     y_n = y.normalize()
-#
-#     print(y_n.gramian())
-#     print(np.trace(y_n.gramian()))
-#     print(y_n.constant())
-#     print(y_n)
-#     print(y_n.frame_operator())
-#     print(y_n.check())
-#     print(y_n.constant())
-#     print(y.constant())
-#     print(np.trace(y_n.gramian()))
-#     print(y.frame_operator())
-#     print(y.gramian())
-#     z = y.complementary()
-#     print(z.frame_operator())
-#
-#     print(z.normalize().gramian() + y.normalize().gramian())
-#     print(z)
-# # See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
+
+def Welch_inequality(frame):
+    oper = frame.frame_operator()
+    lhs = np.trace(oper @ oper)
+    rhs = (np.trace(oper)) ** 2 / frame.nrow
+    return(lhs, rhs)
+
