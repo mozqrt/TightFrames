@@ -9,8 +9,11 @@ plt.style.use('seaborn')
 class TightFrame:
 
     # Enter a Tight Frame as a Matrix with vectors as the columns
-    def __init__(self, matrix):
-        self.matrix = matrix.T
+    def __init__(self, matrix, transposed=False):
+        if transposed:
+            self.matrix = matrix
+        else:
+            self.matrix = matrix.T
         self.ncol, self.nrow = np.shape(matrix)
 
         # if self.check() is False:
@@ -42,17 +45,21 @@ class TightFrame:
             return 'It is not a Tight Frame'
 
     def normalize(self):
-        return TightFrame(self.matrix / np.sqrt(self.constant()))
+        return TightFrame(self.matrix / np.sqrt(self.constant()), transposed=True)
 
     def complementary(self):
-        return TightFrame(np.transpose(null_space(self.matrix)))
+        return TightFrame(np.transpose(null_space(self.matrix)), transposed=True)
 
     def frame_bounds(self):
         eigen_values = scipy.linalg.eigvalsh(self.frame_operator())
         return np.min(eigen_values), np.max(eigen_values)
 
-    def canonical_dual_frame(self):
-        return TightFrame(np.linalg.solve(self.frame_operator(), self.matrix))
+    def canonical_dual_frame(self, svd=True):
+        if svd:
+            U, sigma, V = scipy.linalg.svd(self.matrix)
+            return TightFrame(U @ np.c_[np.diag(1/sigma), np.zeros((np.shape(sigma)[0], np.shape(V)[0] - np.shape(sigma)[0]))] @ V, transposed=True)
+        else:
+            return TightFrame(np.linalg.solve(self.frame_operator(), self.matrix), transposed=True)
 
     def plot(self, normalize=False):
         assert self.nrow == 2
@@ -89,22 +96,17 @@ class TightFrame:
 
         plt.legend()
 
-    def canonical_tight_frame(self, advanced=False):
-        if advanced:
-            U, sigma, V = scipy.linalg.svd(self.frame_operator())
-            # print("U: {}".format(U))
-            # print("V: {}".format(V))
-            return TightFrame(U @ np.transpose(V))
+    def canonical_tight_frame(self, svd=True):
+        if svd:
+            U, sigma, V = scipy.linalg.svd(self.matrix)
+            return TightFrame(U @ np.c_[np.eye(np.shape(U)[0]), np.zeros((np.shape(sigma)[0], np.shape(V)[0] - np.shape(sigma)[0]))] @ V, transposed=True)
         else:
-            return TightFrame(scipy.linalg.solve(scipy.linalg.sqrtm(self.frame_operator()), self.matrix))
+            return TightFrame(scipy.linalg.solve(scipy.linalg.sqrtm(self.frame_operator()), self.matrix), transposed=True)
 
     def plot_canonical(self, normalize=False):
 
         assert self.nrow == 2
         origin = np.zeros(self.matrix.shape)  # origin point
-
-        # V = np.transpose(self.matrix)
-        # plt.quiver(*origin, V[:, 0], V[:, 1], color=['r'], scale=5, label="TF")
 
         W = self.canonical_tight_frame().matrix
         if normalize:
